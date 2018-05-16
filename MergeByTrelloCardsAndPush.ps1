@@ -18,10 +18,15 @@ $cardIds = @()
 foreach ($TrelloListId in $TrelloListIds) {
     $cardIds += ((TrelloApiGet "1/lists/$TrelloListId/cards") | %{$_.idShort})
 }
+Write-Debug "Card Ids: `n$cardIds"
+
+"Fetching latest from git repo..."
+git fetch --all
 
 "Comparing card numbers with available branches..."
-$branchesWithCardIdsReadyForTest = (git branch -r) `
-    | %{ $_.Trim() } `
+$gitBranches = (git branch -r) | %{ $_.Trim() }
+Write-Debug "Git Branches: `n $([string]::Join("`n", $gitBranches))"
+$branchesWithCardIdsReadyForTest = $gitBranches `
     | Where-Object {
         foreach ($cardId in $cardIds) {
             if ($_.StartsWith("origin/$cardId")) { return $true }
@@ -29,12 +34,10 @@ $branchesWithCardIdsReadyForTest = (git branch -r) `
         
         return $false                                                             
     }
+Write-Debug "Branches to merge: `n$([string]::Join("`n", $branchesWithCardIdsReadyForTest))"
 
 "Storing current branch"
 $branch = git rev-parse --abbrev-ref HEAD
-
-"Getting latest..."
-git fetch --all
 
 "Switching to '$TargetBranch' branch..."
 git checkout test
